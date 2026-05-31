@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>三国杀身份发牌器</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 6px;
+    }
+
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .config-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .label {
+      font-size: 15px;
+      color: #666;
+    }
+
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .step-btn:active {
+      background: #5a6fd6;
+    }
+
+    .count {
+      font-size: 18px;
+      font-weight: bold;
+      min-width: 24px;
+      text-align: center;
+    }
+
+    .validation {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .valid { color: #52c41a; }
+    .invalid { color: #ff4d4f; }
+
+    .btn-reset {
+      width: 100%;
+      padding: 10px;
+      background: #f5f5f5;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    /* 房间信息 */
+    .room-info {
+      text-align: center;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .room-code {
+      font-size: 48px;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 8px;
+    }
+
+    .room-hint {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 8px;
+    }
+
+    /* 玩家列表 */
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .player-tag {
+      padding: 6px 12px;
+      background: #667eea;
+      color: #fff;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+
+    .player-tag.host {
+      background: #faad14;
+    }
+
+    .player-tag.ready {
+      background: #52c41a;
+    }
+
+    /* 身份卡 */
+    .role-card {
+      text-align: center;
+      padding: 40px 20px;
+      background: #fff;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+
+    .role-card .role-name {
+      font-size: 36px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .role-card .role-desc {
+      font-size: 14px;
+      color: #999;
+    }
+
+    .role-lord .role-name { color: #faad14; }
+    .role-loyalist .role-name { color: #52c41a; }
+    .role-rebel .role-name { color: #ff4d4f; }
+    .role-traitor .role-name { color: #999; }
+
+    .role-lord { border: 3px solid #faad14; }
+    .role-loyalist { border: 3px solid #52c41a; }
+    .role-rebel { border: 3px solid #ff4d4f; }
+    .role-traitor { border: 3px solid #999; }
+
+    /* 加入房间 */
+    .join-input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 18px;
+      text-align: center;
+      letter-spacing: 6px;
+      margin-bottom: 12px;
+    }
+
+    .join-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .divider::before { margin-right: 12px; }
+    .divider::after { margin-left: 12px; }
+
+    .status-text {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      margin: 12px 0;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">三国杀身份发牌器</div>
+      <div class="subtitle">随机分配，公平游戏</div>
+    </div>
+
+    <!-- 主页 -->
+    <div id="homePage">
+      <button class="btn btn-primary" onclick="showCreateRoom()">🏠 创建房间</button>
+
+      <div class="divider">或者</div>
+
+      <input type="text" class="join-input" id="joinCodeInput" placeholder="输入房间号" maxlength="6">
+      <button class="btn btn-primary" onclick="joinRoom()">📱 加入房间</button>
+    </div>
+
+    <!-- 创建房间 -->
+    <div id="createRoomPage" class="hidden">
+      <div class="room-info">
+        <div class="room-hint">房间号</div>
+        <div class="room-code" id="myRoomCode">------</div>
+        <div class="room-hint">分享此号码给好友加入</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">玩家列表</div>
+        <div class="player-list" id="playerList"></div>
+        <div class="status-text" id="playerCount">等待玩家加入...</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">游戏配置</div>
+
+        <div class="config-item">
+          <span class="label">玩家人数</span>
+          <div class="stepper">
+            <button class="step-btn" onclick="decreaseCount()">-</button>
+            <span class="count" id="playerCountConfig">8</span>
+            <button class="step-btn" onclick="increaseCount()">+</button>
+          </div>
+        </div>
+
+        <div id="roleConfig"></div>
+
+        <div class="validation" id="validation">
+          <span class="valid">✓ 配置有效</span>
+        </div>
+
+        <button class="btn-reset" onclick="resetConfig()">重置为默认</button>
+      </div>
+
+      <button class="btn btn-primary" id="startBtn" onclick="startGame()" disabled>🎴 开始发牌</button>
+      <button class="btn btn-secondary" onclick="leaveRoom()">🚪 离开房间</button>
+    </div>
+
+    <!-- 加入房间 -->
+    <div id="joinRoomPage" class="hidden">
+      <div class="room-info">
+        <div class="room-hint">已加入房间</div>
+        <div class="room-code" id="joinedRoomCode">------</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">玩家列表</div>
+        <div class="player-list" id="joinedPlayerList"></div>
+      </div>
+
+      <div class="status-text" id="joinStatus">等待房主开始游戏...</div>
+      <button class="btn btn-secondary" onclick="leaveRoom()">🚪 离开房间</button>
+    </div>
+
+    <!-- 游戏结果 -->
+    <div id="gamePage" class="hidden">
+      <div class="role-card" id="roleCard">
+        <div class="role-name" id="myRole">???</div>
+        <div class="role-desc" id="roleDesc">你的身份</div>
+      </div>
+      <button class="btn btn-secondary" onclick="backToRoom()">↩️ 返回房间</button>
+    </div>
+  </div>
+
+  <script>
+    // 游戏状态
+    let peer = null;
+    let isHost = false;
+    let roomCode = '';
+    let players = [];
+    let myPlayerId = '';
+    let myNickname = '';
+    let connections = {};
+    let playerCount = 8;
+    let roles = getDefaultConfig(8);
+
+    // 生成随机ID
+    function generateId() {
+      return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    // 生成昵称
+    function generateNickname() {
+      const adjectives = ['快乐', '聪明', '勇敢', '幸运', '无敌'];
+      const nouns = ['玩家', '大侠', '将军', '谋士', '英雄'];
+      return adjectives[Math.floor(Math.random() * adjectives.length)] +
+             nouns[Math.floor(Math.random() * nouns.length)];
+    }
+
+    // 默认配置
+    function getDefaultConfig(count) {
+      const configs = {
+        5: { '主公': 1, '忠臣': 1, '反贼': 2, '内奸': 1 },
+        6: { '主公': 1, '忠臣': 2, '反贼': 2, '内奸': 1 },
+        7: { '主公': 1, '忠臣': 2, '反贼': 3, '内奸': 1 },
+        8: { '主公': 1, '忠臣': 2, '反贼': 4, '内奸': 1 },
+        9: { '主公': 1, '忠臣': 3, '反贼': 4, '内奸': 1 },
+        10: { '主公': 1, '忠臣': 3, '反贼': 5, '内奸': 1 },
+        11: { '主公': 1, '忠臣': 4, '反贼': 5, '内奸': 1 },
+        12: { '主公': 1, '忠臣': 4, '反贼': 6, '内奸': 1 }
+      };
+      return configs[count] || configs[8];
+    }
+
+    // 洗牌
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // 验证配置
+    function validateConfig() {
+      const total = Object.values(roles).reduce((sum, c) => sum + c, 0);
+      return total === playerCount;
+    }
+
+    // 更新配置UI
+    function updateConfigUI() {
+      document.getElementById('playerCountConfig').textContent = playerCount;
+
+      const roleConfig = document.getElementById('roleConfig');
+      roleConfig.innerHTML = Object.entries(roles).map(([role, count]) => `
+        <div class="config-item">
+          <span class="label">${role}</span>
+          <div class="stepper">
+            <button class="step-btn" onclick="decreaseRole('${role}')">-</button>
+            <span class="count">${count}</span>
+            <button class="step-btn" onclick="increaseRole('${role}')">+</button>
+          </div>
+        </div>
+      `).join('');
+
+      const isValid = validateConfig();
+      document.getElementById('validation').innerHTML = isValid
+        ? '<span class="valid">✓ 配置有效</span>'
+        : '<span class="invalid">✗ 身份总数必须等于玩家人数</span>';
+
+      updateStartBtn();
+    }
+
+    function updateStartBtn() {
+      const btn = document.getElementById('startBtn');
+      const allReady = players.length > 1 && players.every(p => p.ready);
+      btn.disabled = !allReady || !validateConfig();
+    }
+
+    function increaseCount() {
+      if (playerCount < 12) {
+        playerCount++;
+        roles = getDefaultConfig(playerCount);
+        updateConfigUI();
+        broadcastConfig();
+      }
+    }
+
+    function decreaseCount() {
+      if (playerCount > 5) {
+        playerCount--;
+        roles = getDefaultConfig(playerCount);
+        updateConfigUI();
+        broadcastConfig();
+      }
+    }
+
+    function increaseRole(role) {
+      roles[role]++;
+      updateConfigUI();
+      broadcastConfig();
+    }
+
+    function decreaseRole(role) {
+      const min = (role === '主公' || role === '反贼') ? 1 : 0;
+      if (roles[role] > min) {
+        roles[role]--;
+        updateConfigUI();
+        broadcastConfig();
+      }
+    }
+
+    function resetConfig() {
+      roles = getDefaultConfig(playerCount);
+      updateConfigUI();
+      broadcastConfig();
+    }
+
+    // 页面切换
+    function showPage(pageId) {
+      ['homePage', 'createRoomPage', 'joinRoomPage', 'gamePage'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(pageId).classList.remove('hidden');
+    }
+
+    // 创建房间
+    function showCreateRoom() {
+      myPlayerId = generateId();
+      myNickname = generateNickname();
+      roomCode = generateId();
+      isHost = true;
+
+      players = [{ id: myPlayerId, nickname: myNickname, ready: true, isHost: true }];
+
+      // 初始化PeerJS
+      peer = new Peer('killcard-' + roomCode);
+
+      peer.on('open', (id) => {
+        console.log('房间已创建:', roomCode);
+        document.getElementById('myRoomCode').textContent = roomCode;
+        updatePlayerList();
+        showPage('createRoomPage');
+      });
+
+      peer.on('connection', (conn) => {
+        handleNewConnection(conn);
+      });
+
+      peer.on('error', (err) => {
+        console.error('PeerJS错误:', err);
+        alert('创建房间失败，请重试');
+      });
+    }
+
+    // 处理新连接
+    function handleNewConnection(conn) {
+      conn.on('open', () => {
+        const playerId = generateId();
+        const nickname = generateNickname();
+
+        players.push({
+          id: playerId,
+          nickname: nickname,
+          ready: false,
+          isHost: false,
+          conn: conn
+        });
+
+        connections[playerId] = conn;
+
+        // 发送欢迎消息
+        conn.send({
+          type: 'welcome',
+          playerId: playerId,
+          nickname: nickname,
+          roomCode: roomCode,
+          players: players.map(p => ({ id: p.id, nickname: p.nickname, ready: p.ready, isHost: p.isHost })),
+          config: { playerCount, roles }
+        });
+
+        updatePlayerList();
+        broadcastPlayerList();
+      });
+
+      conn.on('data', (data) => {
+        handleDataFromPlayer(conn, data);
+      });
+
+      conn.on('close', () => {
+        // 玩家断开连接
+        const index = players.findIndex(p => p.conn === conn);
+        if (index !== -1) {
+          players.splice(index, 1);
+          updatePlayerList();
+          broadcastPlayerList();
+        }
+      });
+    }
+
+    // 处理玩家数据
+    function handleDataFromPlayer(conn, data) {
+      switch (data.type) {
+        case 'ready':
+          const player = players.find(p => p.id === data.playerId);
+          if (player) {
+            player.ready = data.ready;
+            updatePlayerList();
+            broadcastPlayerList();
+            updateStartBtn();
+          }
+          break;
+      }
+    }
+
+    // 加入房间
+    function joinRoom() {
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      if (code.length !== 6) {
+        alert('请输入6位房间号');
+        return;
+      }
+
+      myPlayerId = generateId();
+      myNickname = generateNickname();
+      roomCode = code;
+      isHost = false;
+
+      showPage('joinRoomPage');
+      document.getElementById('joinedRoomCode').textContent = roomCode;
+      document.getElementById('joinStatus').textContent = '正在连接...';
+
+      // 连接到房主
+      peer = new Peer('killcard-' + myPlayerId);
+
+      peer.on('open', () => {
+        const conn = peer.connect('killcard-' + roomCode);
+
+        conn.on('open', () => {
+          console.log('已连接到房间');
+        });
+
+        conn.on('data', (data) => {
+          handleDataFromHost(data);
+        });
+
+        conn.on('close', () => {
+          alert('与房主断开连接');
+          backToHome();
+        });
+
+        connections['host'] = conn;
+      });
+
+      peer.on('error', (err) => {
+        console.error('连接失败:', err);
+        alert('加入房间失败，请检查房间号');
+        backToHome();
+      });
+    }
+
+    // 处理房主数据
+    function handleDataFromHost(data) {
+      switch (data.type) {
+        case 'welcome':
+          myPlayerId = data.playerId;
+          myNickname = data.nickname;
+          players = data.players;
+          playerCount = data.config.playerCount;
+          roles = data.config.roles;
+          updateJoinedPlayerList();
+          break;
+
+        case 'playerList':
+          players = data.players;
+          updateJoinedPlayerList();
+          break;
+
+        case 'config':
+          playerCount = data.config.playerCount;
+          roles = data.config.roles;
+          break;
+
+        case 'gameStart':
+          const myData = data.roles.find(r => r.playerId === myPlayerId);
+          if (myData) {
+            showMyRole(myData.role);
+          }
+          break;
+      }
+    }
+
+    // 显示我的身份
+    function showMyRole(role) {
+      const roleNames = {
+        '主公': '你是主公，你的身份是公开的，保护好自己！',
+        '忠臣': '你是忠臣，保护主公，消灭反贼！',
+        '反贼': '你是反贼，消灭主公你就赢了！',
+        '内奸': '你是内奸，最后活下来的人才是赢家！'
+      };
+
+      const roleClasses = {
+        '主公': 'role-lord',
+        '忠臣': 'role-loyalist',
+        '反贼': 'role-rebel',
+        '内奸': 'role-traitor'
+      };
+
+      document.getElementById('myRole').textContent = role;
+      document.getElementById('roleDesc').textContent = roleNames[role] || '';
+      document.getElementById('roleCard').className = 'role-card ' + (roleClasses[role] || '');
+
+      showPage('gamePage');
+    }
+
+    // 更新玩家列表（房主）
+    function updatePlayerList() {
+      const list = document.getElementById('playerList');
+      list.innerHTML = players.map(p => `
+        <span class="player-tag ${p.isHost ? 'host' : ''} ${p.ready ? 'ready' : ''}">
+          ${p.nickname} ${p.isHost ? '(房主)' : ''} ${p.ready ? '✓' : ''}
+        </span>
+      `).join('');
+
+      document.getElementById('playerCount').textContent =
+        `${players.length}/${playerCount} 玩家已加入`;
+    }
+
+    // 更新玩家列表（加入者）
+    function updateJoinedPlayerList() {
+      const list = document.getElementById('joinedPlayerList');
+      list.innerHTML = players.map(p => `
+        <span class="player-tag ${p.isHost ? 'host' : ''} ${p.ready ? 'ready' : ''}">
+          ${p.nickname} ${p.isHost ? '(房主)' : ''} ${p.ready ? '✓' : ''}
+        </span>
+      `).join('');
+
+      // 自己准备
+      const me = players.find(p => p.id === myPlayerId);
+      if (me && !me.ready) {
+        me.ready = true;
+        connections['host'].send({ type: 'ready', playerId: myPlayerId, ready: true });
+        updateJoinedPlayerList();
+      }
+    }
+
+    // 广播玩家列表
+    function broadcastPlayerList() {
+      const playerList = players.map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        ready: p.ready,
+        isHost: p.isHost
+      }));
+
+      players.forEach(p => {
+        if (p.conn) {
+          p.conn.send({ type: 'playerList', players: playerList });
+        }
+      });
+    }
+
+    // 广播配置
+    function broadcastConfig() {
+      players.forEach(p => {
+        if (p.conn) {
+          p.conn.send({ type: 'config', config: { playerCount, roles } });
+        }
+      });
+    }
+
+    // 开始游戏
+    function startGame() {
+      if (!isHost || players.length < 2) return;
+
+      // 生成身份数组
+      const roleArray = [];
+      for (const [role, count] of Object.entries(roles)) {
+        for (let i = 0; i < count; i++) {
+          roleArray.push(role);
+        }
+      }
+      const shuffledRoles = shuffle(roleArray);
+
+      // 分配身份
+      const roleAssignments = players.map((p, index) => ({
+        playerId: p.id,
+        role: shuffledRoles[index]
+      }));
+
+      // 发送给每个玩家
+      players.forEach(p => {
+        if (p.conn) {
+          p.conn.send({ type: 'gameStart', roles: roleAssignments });
+        }
+      });
+
+      // 房主自己看身份
+      const myAssignment = roleAssignments.find(r => r.playerId === myPlayerId);
+      if (myAssignment) {
+        showMyRole(myAssignment.role);
+      }
+    }
+
+    // 离开房间
+    function leaveRoom() {
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+      players = [];
+      connections = {};
+      backToHome();
+    }
+
+    // 返回主页
+    function backToHome() {
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+      players = [];
+      connections = {};
+      showPage('homePage');
+    }
+
+    // 返回房间
+    function backToRoom() {
+      if (isHost) {
+        showPage('createRoomPage');
+      } else {
+        showPage('joinRoomPage');
+      }
+    }
+
+    // 初始化
+    updateConfigUI();
+  </script>
+</body>
+</html>
